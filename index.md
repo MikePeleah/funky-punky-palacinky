@@ -1,4 +1,6 @@
-
+---
+title: This page contains no content
+---
 
 
 # This page contains no content

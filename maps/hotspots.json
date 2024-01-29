@@ -1,0 +1,19 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "",
+                "description": "Description of Hotspot 1",
+                "color": "", 
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    // Coordinates of Hotspot 1 polygon
+                ]
+            }
+        },
+    ]
+}

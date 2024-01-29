@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<base target="_top">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	
+	<title>Transport Corridors in Central Asia</title>
+	
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+        #map {
+			height: 100%;
+			width: 100%;
+        }
+		.leaflet-container {
+			/* height: 400px;
+			   width: 600px;
+            */
+			height: 100%;
+			width: 100%;
+			max-width: 100%;
+			max-height: 100%;
+		}
+	</style>
+</head>
+<body>
+
+<div id="map"></div>
+<script>
+    // Center on Central Asia, zoom = 5 
+	var map = L.map('map').setView([41.096, 72.114], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 10,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    // Fetch JSON data and add markers
+    fetch('ca-middle-corridor.json')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(city => {
+                console.log(city)
+                var marker = L.marker([city.latitude, city.longitude]).addTo(map);
+                marker.bindPopup("<b>" + city.name + "</b>");
+                // Add connections
+                city.connections.forEach(connection => {
+                    var connectedCity = data.find(item => item.name === connection);
+                    if (connectedCity) {
+                        var latlngs = [
+                            [city.latitude, city.longitude],
+                            [connectedCity.latitude, connectedCity.longitude]
+                        ];
+                        var polyline = L.polyline(latlngs, {color: 'green', weight: 6, opacity: 0.5, smoothFactor: 2}).addTo(map);
+                    }
+                });
+            });
+        })
+        .catch(error => console.error('Error loading JSON file:', error));
+    </script>
+</body>
+</html>

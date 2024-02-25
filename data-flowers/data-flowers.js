@@ -2,23 +2,43 @@ let data = []; // Global variable to store the dataset
 let canvas; // Global variables to store canvas and its context
 let legendContainer; // Legend container
 let ctx;
+let pullType = 'Similar'; 
+
+// Define global variable interactionsType and its possible states
+let interactionsType = 'None';
+const interactionStates = ['None', 'Similarity', 'Complementarity'];
 
 // Add event listener to track mouse movement
 let mouseX;
 let mouseY;
 
-const avoidanceSpeed = 0.15; // Speed to avoid mouse pointer  
-const slowDown= 0.05;        // Slowdown constant 
+const avoidanceSpeed = 0.25; // Speed to avoid mouse pointer  
+const slowDown = 0.05;       // Slowdown constant 
+const pullConst = 0.01;      // Constant for long-distance pull 
+const bounceAccel = 1.25;       // Impulse multiplier in case of bouncing 
 
 const petalWidth= 2/3;        // Petal width as a proportion of a sector 
+const petalStart= (1 - petalWidth)/2 * (Math.PI / 2) ; // Start drawing petal wioth a shift
 
 const skills = ['data', 'dataviz', 'drawing', 'handicraft'];
-const maxfloweR = 40;
+
+let   maxfloweR = 40;         // Max radius of flower 
+// Define the minimum and maximum values for maxfloweR
+const minMaxfloweR = 15;
+const maxMaxfloweR = 100;
+
 const skillColors = {
+    'data'      : '#4f83ce',    // Data -- Medium Sapphire, rest is tetradic https://www.colorhexa.com/4f83ce
+    'dataviz'   : '#4fce9a',    // DataViz 
+    'drawing'   : '#ce4f83',    // Drawing
+    'handicraft': '#ce9a4f'     // Handicraft
+
+/* Older version of colors
     'data'      : '#2D5DA1',    // Data -- Medium Sapphire, rest is tetradic https://www.colorhexa.com/2d5da1
     'dataviz'   : '#2DA171',    // DataViz 
     'drawing'   : '#A12D5D',    // Drawing
     'handicraft': '#A1712D'     // Handicraft
+*/
 };
 
 // Function to load flower data /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,6 +74,8 @@ function assignRandomProperties() {
         flower.speedY = Math.random() * 2 - 1; // Random number between -1 and 1 for vertical speed
         // console.log(flower)
     });
+    // Redraw the flowers with updated highlights
+    drawFlowers();
 }
 
 // Function to draw flowers ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,14 +102,16 @@ function drawFlowers() {
         if (flower.hasOwnProperty('highlighted') && flower.highlighted === true) {
             // Draw glowing yellow circle
             ctx.beginPath();
-            ctx.arc(flower.x, flower.y, maxfloweR + 5, 0, Math.PI * 2);
+            ctx.arc(flower.x, flower.y, maxfloweR + 10, 0, Math.PI * 2);
             ctx.strokeStyle = 'rgba(255, 255, 0, 0.33)'; // Yellow color with opacity
-            ctx.lineWidth = 5;
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.33)';
+            ctx.lineWidth = 0;
             ctx.stroke();
             ctx.closePath();
+            ctx.fill();
         }
         // Draw petals for each skill
-        let startAngle = 0;
+        let startAngle = petalStart; // Was 0 
         // console.log("Loop through skills: ", skills)
 
         skills.forEach(skill => {
@@ -114,6 +138,7 @@ function drawFlowers() {
 
 // Function to update flower positions ///////////////////////////////////////////////////////////////////////////////////////////
 function updateFlowerPositions() {
+    // Move flowers according to their speeds 
     data.forEach(flower => {
         // Calculate magnitude of the speed vector
         const speedMagnitude = Math.sqrt(flower.speedX ** 2 + flower.speedY ** 2);
@@ -131,17 +156,17 @@ function updateFlowerPositions() {
         // Bounce from canvas borders
         // Math is really strange, huhu....
         if (flower.x < 1.5 * maxfloweR || flower.x > (canvas.width - 1.5 * maxfloweR)) {
-            flower.speedX *= -1;
+            flower.speedX *= -1 * bounceAccel;
         }
         if (flower.y < 1.5 * maxfloweR || flower.y > (canvas.height - 1.5 * maxfloweR)) {
-            flower.speedY *= -1;
+            flower.speedY *= -1 * bounceAccel;
         }
 
         // If flower is too close to mouse pointer, adjust its speed to avoid it
         const dx = flower.x - mouseX;
         const dy = flower.y - mouseY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < maxfloweR * 2) {
+        if (distance < maxfloweR * 3) {
             // Calculate unit vector pointing away from the mouse
             const unitX = dx / distance;
             const unitY = dy / distance;
@@ -155,7 +180,8 @@ function updateFlowerPositions() {
 
         }
 
-        // Bounce from other flowers
+
+        // Bounce from other flowers ..................................................................................................
         data.forEach(otherFlower => {
             if (flower !== otherFlower) {
                 const dx = flower.x - otherFlower.x;
@@ -168,7 +194,7 @@ function updateFlowerPositions() {
                     const reflectionAngle = Math.atan2(dy, dx);
 
                     // Calculate new speeds after collision
-                    const totalSpeed = Math.sqrt(flower.speedX ** 2 + flower.speedY ** 2);
+                    const totalSpeed = Math.sqrt(flower.speedX ** 2 + flower.speedY ** 2) * bounceAccel;
                     const newSpeedX = totalSpeed * Math.cos(reflectionAngle);
                     const newSpeedY = totalSpeed * Math.sin(reflectionAngle);
 
@@ -188,10 +214,6 @@ function updateFlowerPositions() {
             flower.y = Math.random() * (canvas.height- 2 * maxfloweR) + maxfloweR;
             flower.speedY = (Math.random() * 2 - 1) * 2; // Random number between -1 and 1 for vertical speed
         }
-
-
-
-
     });
 }
 
@@ -260,13 +282,16 @@ legendContainer = document.querySelector('.legend');
 const arrangeButton = document.getElementById('arrangeButton');
 arrangeButton.addEventListener('click', arrangeFlowers);
 
+//Attach arrangeFlowers to a button click event
+const randomizeButton = document.getElementById('randomizeButton');
+randomizeButton.addEventListener('click', assignRandomProperties);
+
 // Add event listener to track mouse movement
 canvas.addEventListener('mousemove', function(event) {
     // Update mouseX and mouseY with the current mouse position
     mouseX = event.clientX - canvas.getBoundingClientRect().left;
     mouseY = event.clientY - canvas.getBoundingClientRect().top;
 });
-
 
 // Add event listener to track mouse clicks and highlight flowers 
 canvas.addEventListener('click', function(event) {
@@ -278,6 +303,24 @@ canvas.addEventListener('click', function(event) {
     // Highlight flowers based on mouse click
     highlightFlowers(mouseX, mouseY);
 });
+
+/*
+// Add click event listener to the button for Interarctions 
+const interactionsButton = document.getElementById('interactionsButton');
+interactionsButton.addEventListener('click', function() {
+    // Get the index of the current state in the interactionStates array
+    const currentIndex = interactionStates.indexOf(interactionsType);
+
+    // Determine the index of the next state, considering circular behavior
+    const nextIndex = (currentIndex + 1) % interactionStates.length;
+
+    // Update interactionsType to the next state
+    interactionsType = interactionStates[nextIndex];
+
+    // Update the button text to reflect the new state
+    interactionsButton.textContent = `Interactions: ${interactionsType}`;
+});
+*/
 
 // Add intro legend
 const introLegend = document.createElement('span');
@@ -300,6 +343,29 @@ skills.forEach(skill => {
     legendItem.appendChild(skillName);
     // Append legend item to legend container
     legendContainer.appendChild(legendItem);
+});
+
+// Dealing with canvas size 
+// Define the initial dimensions of the canvas
+let canvasWidth = window.innerWidth * 0.95;
+let canvasHeight = window.innerHeight * 0.85;
+// Set the canvas dimensions
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
+// Calculate maxfloweR based on the initial canvas dimensions
+maxfloweR = Math.min(Math.max(Math.max(40*canvas.width/1920, 40*canvas.width/1080), minMaxfloweR), maxMaxfloweR);
+
+// Redraw the canvas content when the window is resized
+window.addEventListener('resize', function() {
+    // Update the canvas dimensions
+    canvasWidth = window.innerWidth * 0.95;
+    canvasHeight = window.innerHeight * 0.85;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    // Recalculate maxfloweR based on the new canvas dimensions
+    maxfloweR = Math.min(Math.max(Math.max(40*canvas.width/1920, 40*canvas.width/1080), minMaxfloweR), maxMaxfloweR);
+    // Redraw the canvas content
+    drawFlowers();
 });
 
 // console.log(canvas.width, canvas.height);

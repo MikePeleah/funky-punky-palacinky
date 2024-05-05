@@ -22,10 +22,10 @@ const petalStart= (1 - petalWidth)/2 * (Math.PI / 2) ; // Start drawing petal wi
 
 const skills = ['data', 'dataviz', 'drawing', 'handicraft'];
 
-let   maxfloweR = 40;         // Max radius of flower 
+let   maxfloweR = 25;         // Max radius of flower 
 // Define the minimum and maximum values for maxfloweR
-const minMaxfloweR = 15;
-const maxMaxfloweR = 100;
+const minMaxfloweR = 10;
+const maxMaxfloweR = 30;
 
 const skillColors = {
     'data'      : '#4f83ce',    // Data -- Medium Sapphire, rest is tetradic https://www.colorhexa.com/4f83ce
@@ -43,7 +43,53 @@ const skillColors = {
 
 // Function to load flower data /////////////////////////////////////////////////////////////////////////////////////////////////
 function loadFlowerData() {
-    return fetch('data-flowers.json')
+    // Try to get from Google Sheets 
+    const API_KEY = 'AIzaSyDmWCL6_snpGx0aPg8nJlXLzxmj3TDfG6A';
+    const SHEET_ID = '19alxXKV6tPv1SbNzVLgv7_KaCcngUwigmh5LJDMmPxY';
+    const RANGE = 'Данные!A:E'; // Specify the range you want to read
+    // Fetch data from Google Sheets
+    fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`)
+      .then(response => response.json())
+      .then(jsonData => {
+            // console.log("Look what I got from GS! ", jsonData)
+            sheetData = jsonData.values;
+            // Mapping of column names from Google Sheets to dictionary keys
+            const columnMapping = {
+                'Как вас зовут?': 'name',
+                'Рисование': 'drawing',
+                'Рукоделие': 'handicraft',
+                'Данные': 'data',
+                'Датавиз': 'dataviz'
+            };          
+            // Initialize an empty list to store the dictionaries
+            const dataList = [];
+            // Iterate over the remaining rows (excluding the first row)
+            for (let i = 1; i < sheetData.length; i++) {
+                const row = sheetData[i];
+                const somedata = {};
+                // Iterate over the columns
+                for (let j = 0; j < row.length; j++) {
+                    const columnName = sheetData[0][j]; // Get the column name from the first row
+                    const key = columnMapping[columnName]; // Get the corresponding dictionary key
+                    // console.log(columnName, key, row[j])
+                    somedata[key] = key !== 'name' ? parseInt(row[j]) : row[j];
+                }
+                // Add the constructed dictionary to the list
+            dataList.push(somedata);
+          }
+          console.log(dataList);
+          // Assuming data is a global variable
+          data = dataList;
+          // Assign random positions and speeds
+          assignRandomProperties();
+          animate();
+          // console.log("Look what I loaded! ", data)
+          return jsonData; // Return the loaded data
+      })
+      .catch(error => {console.error('Error fetching data:', error)});
+    
+    // Now try to load from a file       
+    fetch('data-flowers.json')
         .then(response => response.json())
         .then(jsonData => {
             // Assuming data is a global variable
@@ -56,6 +102,7 @@ function loadFlowerData() {
         })
         .catch(error => {
             console.error('Error loading dataset:', error);
+            data = [{"name":"Наталья","drawing":3,"handicraft":2,"data":3,"dataviz":3}]
             throw error; // Re-throw the error to propagate it to the caller
         });
 }
@@ -177,9 +224,7 @@ function updateFlowerPositions() {
 
             // flower.speedX = Math.random() * 2 - 1 + avoidanceSpeed; // Random number between -1 and 1 for horizontal speed
             // flower.speedY = Math.random() * 2 - 1 + avoidanceSpeed; // Random number between -1 and 1 for vertical speed
-
         }
-
 
         // Bounce from other flowers ..................................................................................................
         data.forEach(otherFlower => {
